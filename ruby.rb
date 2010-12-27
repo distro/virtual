@@ -9,11 +9,17 @@ repository.do {
     `gem list --remote`.lines.each {|line|
       CLI.info "Parsing `#{line.chomp}`" if System.env[:VERBOSE]
 
-      t, name, version = line.match(/^(.+?) \((.+?)([,\s].*)?\)$/).to_a
+      t, name, version = line.match(/^(.+?) \((.+?)\)$/).to_a
 
       unless name && version
         CLI.warn "`#{line.chomp}` was not parsed succesfully" if System.env[:VERBOSE]
         next
+      end
+
+      begin
+        Versionomy.parse(version)
+      rescue Versionomy::Errors::ParseError => e
+        version.sub!(e.message.match(/Extra characters: "(.*?)"/).to_a.last, '')
       end
 
       block.call(Package.new(
