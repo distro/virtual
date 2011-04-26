@@ -17,15 +17,27 @@ repository.do {
       end
 
       begin
-        Versionomy.parse(version)
+        Versionomy.parse(version, :rubygems)
       rescue Versionomy::Errors::ParseError => e
         version.sub!(e.message.match(/Extra characters: "(.*?)"/).to_a.last, '')
+
+        begin
+          Versionomy.parse(version, :rubygems)
+        rescue Versionomy::Errors::ParseError
+          if System.env[:VERBOSE]
+            require 'packo/cli'
+
+            CLI.warn("Problem parsing #{name}")
+          end
+
+          next
+        end
       end
 
       block.call(Package.new(
-        :tags    => ['ruby', 'gem'] + ((dom.xpath(%{//gem[name = "#{name}"]/tags}).first.text.split(/\s+/) rescue nil) || []),
-        :name    => name,
-        :version => version
+        tags:    ['ruby', 'gem'] + ((dom.xpath(%{//gem[name = "#{name}"]/tags}).first.text.split(/\s+/) rescue nil) || []),
+        name:    name,
+        version: Versionomy.parse(version, :rubygems)
       ))
     }
   end
