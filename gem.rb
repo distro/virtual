@@ -34,11 +34,11 @@ repository.do {
         end
       end
 
-      block.call(Package.new(
+      block.call Package.new(
         tags:    ['ruby', 'gem'] + ((dom.xpath(%{//gem[name = "#{name}"]/tags}).first.text.split(/\s+/) rescue nil) || []),
         name:    name,
         version: Versionomy.parse(version, :rubygems)
-      ))
+      )
     }
   end
 
@@ -52,9 +52,9 @@ repository.do {
 }
 
 __END__
-$$$
+---
 
-$$$ data $$$
+--- data ---
 
 <data>
   <gem name="dm-sqlite-adapter">
