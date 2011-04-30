@@ -8,20 +8,36 @@ repository.do {
     CLI.warn 'Run packo repository in unprotected mode (packo-repository) or CPAN may not work'
   end
 
+  def versionify (version)
+    Versionomy.parse(version.gsub(/undef|version/i, '0').sub(/^[.v]/, ''))
+  end
+
   def each_package (&block)
     cpan
 
     `perl -MCPAN -e 'print join("\\n", map {$_->{ID}."-".$_->{RO}->{CPAN_VERSION}} CPAN::Shell->expand("Module", "/./"))'`.each_line {|line|
-      CLI.info "Parsing `#{line.chomp}`" if System.env[:VERBOSE]
+      CLI.info "Parsing `#{line.strip}`" if System.env[:VERBOSE]
 
       whole, name, version = line.strip.match(/^((?:\w+::)*\w+)-([^\-]+)$/).to_a
 
       next unless whole
 
+      begin
+        versionify(version)
+      rescue Versionomy::Errors::ParseError => e
+        version.sub!(e.message.match(/Extra characters: "(.*?)"/).to_a.last, '')
+
+        begin
+          versionify(version)
+        rescue Versionomy::Errors::ParseError
+          version = '0'
+        end
+      end
+
       block.call Package.new(
         tags:     ['perl', 'cpan'],
         name:     name,
-        version:  version.gsub('undef', '0')
+        version:  versionify(version)
       )
     }
 
@@ -40,10 +56,23 @@ repository.do {
     }
   end
 
+  def has? (package)
+    !`perl -MCPAN -e 'CPAN::Shell->i("#{package.name}");'`.
+      include?("No objects found of any type for argument #{package.name}")
+  end
+
   def install (package)
     cpan('-i', package.name)
 
-    Packo.contents(filesystem.bin.cpan_files.execute(package.name).lines)
+    package              = package.clone
+    package.contents     = Packo.contents(filesystem.bin.cpan_files.execute(package.name).lines)
+    package.dependencies = Package::Dependencies.new(package)
+    
+    self.dependencies(package).each {|dep|
+      package.dependencies << Package::Dependency.new(dep.to_hash)
+    }
+
+    package
   end
 
   def uninstall (package)

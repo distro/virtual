@@ -24,13 +24,7 @@ repository.do {
         begin
           Versionomy.parse(version, :rubygems)
         rescue Versionomy::Errors::ParseError
-          if System.env[:VERBOSE]
-            require 'packo/cli'
-
-            CLI.warn("Problem parsing #{name}")
-          end
-
-          next
+          version = '0'
         end
       end
 
