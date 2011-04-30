@@ -4,20 +4,24 @@ require 'nokogiri'
 require 'net/http'
 
 repository.do {
+  if Packo.protected?
+    CLI.warn 'Run packo repository in unprotected mode (packo-repository) or CPAN may not work'
+  end
+
   def each_package (&block)
     cpan
 
     `perl -MCPAN -e 'print join("\\n", map {$_->{ID}."-".$_->{RO}->{CPAN_VERSION}} CPAN::Shell->expand("Module", "/./"))'`.each_line {|line|
-      line.strip!
+      CLI.info "Parsing `#{line.chomp}`" if System.env[:VERBOSE]
 
-      next unless line.match(/^((?:\w+::)*\w+)-(.+)$/)
+      whole, name, version = line.strip.match(/^((?:\w+::)*\w+)-([^\-]+)$/).to_a
 
-      name, version = line.split(?-, 2)
+      next unless whole
 
       block.call Package.new(
         tags:     ['perl', 'cpan'],
         name:     name,
-        version:  version.gsub('undef', ?0)
+        version:  version.gsub('undef', '0')
       )
     }
 
@@ -53,7 +57,7 @@ repository.do {
   def get_deps (package)
     Nokogiri::XML(Net::HTTP.get(URI.parse("http://deps.cpantesters.org/?xml=1;module=%s;perl=%s;os=any%%20OS;pureperl=0" %
       [package, perl_version].map {|s| URI.encode(s) }))).xpath('//cpandeps/dependency').select {|node|
-        node.xpath(node.path + '/depth').text == ?1
+        node.xpath(node.path + '/depth').text == '1'
       }.map {|node|
         node.xpath(node.path + '/module').text
       }

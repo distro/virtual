@@ -9,7 +9,7 @@ repository.do {
     `gem list --remote`.lines.each {|line|
       CLI.info "Parsing `#{line.chomp}`" if System.env[:VERBOSE]
 
-      t, name, version = line.match(/^(.+?) \((.+?)\)$/).to_a
+      whole, name, version = line.match(/^(.+?) \((.+?)\)$/).to_a
 
       unless name && version
         CLI.warn "`#{line.chomp}` was not parsed succesfully" if System.env[:VERBOSE]
