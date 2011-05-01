@@ -13,7 +13,7 @@ repository.do {
   end
 
   def each_package (&block)
-    cpan
+    warn; cpan
 
     `perl -MCPAN -e 'print join("\\n", map {$_->{ID}."-".$_->{RO}->{CPAN_VERSION}} CPAN::Shell->expand("Module", "/./"))'`.each_line {|line|
       CLI.info "Parsing `#{line.strip}`" if System.env[:VERBOSE]
@@ -75,9 +75,8 @@ repository.do {
     package
   end
 
-  def uninstall (package)
-  end
-
+# protected
+  
   memoize
   def perl_version
     `perl -MConfig -e 'print $Config{version};'`
