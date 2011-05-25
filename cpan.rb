@@ -67,7 +67,7 @@ repository.do {
     package              = package.clone
     package.contents     = Packo.contents(filesystem.bin.cpan_files.execute(package.name).lines)
     package.dependencies = Package::Dependencies.new(package)
-    
+
     self.dependencies(package).each {|dep|
       package.dependencies << Package::Dependency.new(dep.to_hash)
     }
@@ -92,7 +92,7 @@ repository.do {
   end
 
   def cpan (*args)
-    if Process.uid != 0
+    if Packo.user?
       root = File.join(ENV['HOME'], '.cpan')
       lock = File.join(root, '.lock')
 
