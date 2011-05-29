@@ -4,21 +4,13 @@ require 'rubygems/dependency_installer'
 
 repository.do {
   def versionify (version)
-    Versionomy.parse(version, :rubygems)
-  rescue Versionomy::Errors::ParseError => e
-    version.sub!(e.message.match(/Extra characters: "(.*?)"/).to_a.last, '')
-
-    begin
-      Versionomy.parse(version, :rubygems)
-    rescue Versionomy::Errors::ParseError
-      version = '0'
-    end
-
-    Versionomy.parse(version, :rubygems)
+    Versionub.parse(version)
+  rescue Exception => e
+    '0'
   end
 
   def each_package (&block)
-    data = YAML.load(filesystem.data.to_s)
+    @data ||= YAML.parse(filesystem.data.to_s).transform
 
     `gem list --remote`.lines.each {|line|
       CLI.info "Parsing `#{line.chomp}`" if System.env[:VERBOSE]
@@ -30,7 +22,6 @@ repository.do {
         next
       end
 
-
       block.call Package.new(
         tags:    ['ruby', 'gem'] + ((data[name]['tags'] rescue nil) || []),
         name:    name,
@@ -40,9 +31,10 @@ repository.do {
   end
 
   def each_dependency (package, &block)
-    data = YAML.load(filesystem.data.to_s)
+    @data ||= YAML.parse(filesystem.data.to_s).transform
 
     package.envify!
+
     deptypes = [:runtime]
     deptypes << :development if package.flavor.development?
 
@@ -72,11 +64,13 @@ repository.do {
 
   def has? (package)
     version = package.version ? "= #{package.version}" : Gem::Requirement.default
+
     !!(gem_version(package.name, version) or gem_version(package.name, version, true))
   end
 
   def install (package)
     package.envify!
+
     args = []
 
     if package.flavor.vanilla? || package.flavor.documentation?
@@ -130,8 +124,9 @@ repository.do {
 
   def gem_version (gem_name, gem_version=nil, pre=false)
     gem_version ||= Gem::Requirement.default
+
     version = Gem::DependencyInstaller.new.find_spec_by_name_and_version(gem_name, gem_version, pre).sort_by {|x|
-      Versionomy.parse(x.first.version.to_s)
+      Versionub.parse(x.first.version.to_s)
     }.last.first.version.to_s
 
     versionify(version) if version
@@ -148,8 +143,9 @@ $$$ data $$$
 ---
 dm-sqlite-adapter:
   tags:
-  - datamapper
-  - database
+    - datamapper
+    - database
+
   dependencies:
-  - database/sqlite
+    - database/sqlite
 
